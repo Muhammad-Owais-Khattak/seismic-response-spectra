@@ -121,7 +121,7 @@ h2 { color: var(--ink); font-size: 16px; font-weight: 700; line-height: 1.3; mar
 .map-stamp .pulse-dot { height: 5px; width: 5px; }
 .panel-foot { align-items: center; color: #89958e; display: flex; font-family: var(--mono); font-size: 8px; justify-content: space-between; min-height: 39px; padding: 0 16px; }
 .map-foot { border-top: 1px solid #eff2ef; }
-.leaflet-container { background: #e5ece7; font-family: var(--sans); }
+.leaflet-container { background-color: #edf2ee; background-image: linear-gradient(#dce6df 1px, transparent 1px), linear-gradient(90deg, #dce6df 1px, transparent 1px); background-size: 32px 32px; font-family: var(--sans); }
 .leaflet-control-attribution { font-size: 8px !important; }
 
 .events-panel { display: flex; flex-direction: column; }

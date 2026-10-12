@@ -53,12 +53,26 @@ function initMap() {
   }
   map = L.map("earthquake-map", { zoomControl: false, worldCopyJump: true, minZoom: 2 }).setView([17, 5], 2);
   L.control.zoom({ position: "topright" }).addTo(map);
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-    subdomains: "abcd",
-    maxZoom: 18,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-  }).addTo(map);
+  map.attributionControl.setPrefix(false);
   markerLayer = L.layerGroup().addTo(map);
+  loadWorldMap();
+}
+
+async function loadWorldMap() {
+  try {
+    const response = await fetch("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json");
+    if (!response.ok) throw new Error(`Map data returned ${response.status}`);
+    const topology = await response.json();
+    L.geoJSON(topojson.feature(topology, topology.objects.countries), {
+      interactive: false,
+      style: { color: "#9aafa4", weight: 0.7, fillColor: "#d7e5d9", fillOpacity: 0.82 },
+    }).addTo(map);
+    map.attributionControl.addAttribution('Country boundaries: <a href="https://www.naturalearthdata.com/">Natural Earth</a>');
+    markerLayer.bringToFront();
+  } catch (error) {
+    console.error("Unable to load country boundaries:", error);
+    document.querySelector("#map-count").textContent = "Country outlines unavailable; event locations remain plotted";
+  }
 }
 
 function magnitudeClass(magnitude) {
