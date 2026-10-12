@@ -53,9 +53,10 @@ function initMap() {
   }
   map = L.map("earthquake-map", { zoomControl: false, worldCopyJump: true, minZoom: 2 }).setView([17, 5], 2);
   L.control.zoom({ position: "topright" }).addTo(map);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+    subdomains: "abcd",
     maxZoom: 18,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
   }).addTo(map);
   markerLayer = L.layerGroup().addTo(map);
 }
@@ -273,8 +274,8 @@ function renderChart() {
         tooltip: { backgroundColor: "#173b35", padding: 10, titleFont: { family: "DM Mono" }, bodyFont: { family: "DM Mono" }, callbacks: { label: (context) => ` ${context.parsed.y.toFixed(3)} ${measure.unit}` } },
       },
       scales: {
-        x: { type: "linear", grid: { color: "#edf1ee" }, border: { display: false }, title: { display: true, text: "Oscillator period (s)", color: "#7d8982", font: { family: "DM Mono", size: 9 } }, ticks: { color: "#89958e", font: { family: "DM Mono", size: 8 }, maxTicksLimit: 9 } },
-        y: { beginAtZero: true, grid: { color: "#edf1ee" }, border: { display: false }, title: { display: true, text: measure.axis, color: "#7d8982", font: { family: "DM Mono", size: 9 } }, ticks: { color: "#89958e", font: { family: "DM Mono", size: 8 }, maxTicksLimit: 5 } },
+        x: { type: "linear", grid: { color: "#edf1ee" }, border: { display: false }, title: { display: true, text: "Oscillator period (s)", color: "#7d8982", font: { family: "DM Mono", size: 10 } }, ticks: { color: "#89958e", font: { family: "DM Mono", size: 9 }, maxTicksLimit: 9 } },
+        y: { beginAtZero: true, grid: { color: "#edf1ee" }, border: { display: false }, title: { display: true, text: measure.axis, color: "#7d8982", font: { family: "DM Mono", size: 10 } }, ticks: { color: "#89958e", font: { family: "DM Mono", size: 9 }, maxTicksLimit: 5 } },
       },
     },
   });
