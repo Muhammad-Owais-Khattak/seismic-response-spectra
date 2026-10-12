@@ -55,6 +55,21 @@
           </div>
         </div>
 
+        <section class="alert-toolbar" aria-label="Earthquake notification settings">
+          <div class="alert-intro">
+            <span class="alert-symbol" aria-hidden="true">!</span>
+            <div><div class="alert-kicker">GLOBAL EARTHQUAKE ALERTS</div><div class="alert-status" id="alert-status" aria-live="polite">Alerts are off</div></div>
+          </div>
+          <div class="alert-options">
+            <label class="threshold-control" for="alert-threshold"><span>NOTIFY FROM</span>
+              <select id="alert-threshold" aria-label="Minimum magnitude for notifications">
+                <option value="3">M 3.0+</option><option value="4">M 4.0+</option><option value="4.5" selected>M 4.5+</option><option value="5">M 5.0+</option><option value="6">M 6.0+</option>
+              </select>
+            </label>
+            <button class="alert-toggle" id="alert-toggle" type="button" aria-pressed="false">Enable alerts</button>
+          </div>
+        </section>
+
         <section class="metrics-grid" aria-label="Earthquake summary">
           <article class="metric-card metric-primary"><div class="metric-top"><span>EVENTS IN WINDOW</span><span class="metric-glyph">↗</span></div><div class="metric-value" id="event-count">--</div><div class="metric-foot"><span class="metric-mark"></span><span id="window-label">USGS · past 24 hours</span></div></article>
           <article class="metric-card"><div class="metric-top"><span>MAGNITUDE 4.5+</span><span class="metric-glyph orange">◉</span></div><div class="metric-value" id="strong-count">--</div><div class="metric-foot">Significant events in window</div></article>

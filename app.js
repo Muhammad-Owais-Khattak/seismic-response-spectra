@@ -14,6 +14,8 @@ const MEASURES = {
 const elements = {
   connection: document.querySelector("#connection-label"), clock: document.querySelector("#clock"),
   range: document.querySelector("#feed-range"), refresh: document.querySelector("#refresh-button"),
+  alertStatus: document.querySelector("#alert-status"), alertToggle: document.querySelector("#alert-toggle"),
+  alertThreshold: document.querySelector("#alert-threshold"),
   eventCount: document.querySelector("#event-count"), strongCount: document.querySelector("#strong-count"),
   maxMagnitude: document.querySelector("#max-magnitude"), strongestPlace: document.querySelector("#strongest-place"),
   windowLabel: document.querySelector("#window-label"), mapCount: document.querySelector("#map-count"),
@@ -35,6 +37,106 @@ let markerLayer;
 let spectrumRows = [];
 let activeMeasure = "psa_m_per_s2";
 let spectrumChart;
+const ALERTS_ENABLED_KEY = "seismic-field-alerts-enabled";
+const ALERT_THRESHOLD_KEY = "seismic-field-alert-threshold";
+const SEEN_EVENTS_KEY = "seismic-field-seen-events";
+let alertsEnabled = localStorage.getItem(ALERTS_ENABLED_KEY) === "true";
+let alertsBaselineReady = false;
+let knownEventIds = new Set(JSON.parse(localStorage.getItem(SEEN_EVENTS_KEY) || "[]"));
+
+function updateAlertControls() {
+  if (!("Notification" in window)) {
+    elements.alertStatus.textContent = "This browser does not support notifications";
+    elements.alertToggle.textContent = "Unavailable";
+    elements.alertToggle.disabled = true;
+    return;
+  }
+  if (Notification.permission === "denied") {
+    alertsEnabled = false;
+    elements.alertStatus.textContent = "Notifications are blocked in browser settings";
+    elements.alertToggle.textContent = "Blocked";
+    elements.alertToggle.disabled = true;
+    elements.alertToggle.setAttribute("aria-pressed", "false");
+    return;
+  }
+  elements.alertToggle.disabled = false;
+  elements.alertToggle.textContent = alertsEnabled && Notification.permission === "granted" ? "Alerts on" : "Enable alerts";
+  elements.alertToggle.setAttribute("aria-pressed", String(alertsEnabled));
+  elements.alertStatus.textContent = alertsEnabled && Notification.permission === "granted"
+    ? `New global events at M ${Number(elements.alertThreshold.value).toFixed(1)}+`
+    : "Choose a magnitude and enable browser notifications";
+}
+
+async function toggleAlerts() {
+  if (!("Notification" in window) || Notification.permission === "denied") {
+    updateAlertControls();
+    return;
+  }
+  if (alertsEnabled) {
+    alertsEnabled = false;
+  } else {
+    const permission = Notification.permission === "granted"
+      ? "granted"
+      : await Notification.requestPermission();
+    alertsEnabled = permission === "granted";
+  }
+  localStorage.setItem(ALERTS_ENABLED_KEY, String(alertsEnabled));
+  updateAlertControls();
+}
+
+function rememberEventIds(items) {
+  for (const item of items) knownEventIds.add(item.id);
+  if (knownEventIds.size > 3000) knownEventIds = new Set([...knownEventIds].slice(-2000));
+  localStorage.setItem(SEEN_EVENTS_KEY, JSON.stringify([...knownEventIds]));
+}
+
+function checkForNewAlerts(incomingEvents) {
+  if (!alertsBaselineReady) {
+    rememberEventIds(incomingEvents);
+    alertsBaselineReady = true;
+    return;
+  }
+  const freshEvents = incomingEvents.filter((event) => event.id && !knownEventIds.has(event.id));
+  rememberEventIds(freshEvents);
+  if (!alertsEnabled || !("Notification" in window) || Notification.permission !== "granted") return;
+  const cutoff = Date.now() - 15 * 60 * 1000;
+  const threshold = Number(elements.alertThreshold.value);
+  freshEvents
+    .filter((event) => {
+      const properties = event.properties;
+      const latestTimestamp = Math.max(properties.time || 0, properties.updated || 0);
+      return properties.status !== "deleted" && Number(properties.mag) >= threshold && latestTimestamp >= cutoff;
+    })
+    .sort((first, second) => second.properties.mag - first.properties.mag)
+    .slice(0, 3)
+    .forEach((event) => {
+      const properties = event.properties;
+      const depth = event.geometry?.coordinates?.[2];
+      const notification = new Notification(`M ${Number(properties.mag).toFixed(1)} earthquake`, {
+        body: `${properties.place || "Location unavailable"}${Number.isFinite(depth) ? ` · ${depth.toFixed(0)} km deep` : ""}`,
+        tag: event.id,
+      });
+      notification.onclick = () => {
+        window.focus();
+        selectEvent(event.id);
+        document.querySelector("#events").scrollIntoView({ behavior: "smooth", block: "start" });
+        notification.close();
+      };
+    });
+}
+
+function initAlerts() {
+  const savedThreshold = localStorage.getItem(ALERT_THRESHOLD_KEY);
+  if ([...elements.alertThreshold.options].some((option) => option.value === savedThreshold)) {
+    elements.alertThreshold.value = savedThreshold;
+  }
+  elements.alertThreshold.addEventListener("change", () => {
+    localStorage.setItem(ALERT_THRESHOLD_KEY, elements.alertThreshold.value);
+    updateAlertControls();
+  });
+  elements.alertToggle.addEventListener("click", toggleAlerts);
+  updateAlertControls();
+}
 
 function initClock() {
   const update = () => {
@@ -198,6 +300,7 @@ async function loadFeed() {
     if (!response.ok) throw new Error(`USGS returned ${response.status}`);
     const payload = await response.json();
     events = Array.isArray(payload.features) ? payload.features : [];
+    checkForNewAlerts(events);
     elements.connection.textContent = "USGS feed connected";
     elements.feedUpdated.textContent = `Updated ${formatTime(Date.now())} UTC`;
     renderMetrics();
@@ -321,6 +424,7 @@ elements.csvUpload.addEventListener("change", async (event) => {
 });
 
 initClock();
+initAlerts();
 initMap();
 loadDefaultSpectrum();
 loadFeed();
