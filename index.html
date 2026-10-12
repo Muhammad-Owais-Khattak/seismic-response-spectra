@@ -70,6 +70,25 @@
           </div>
         </section>
 
+        <section class="spotlight-card" aria-label="Featured earthquake event">
+          <div class="spotlight-copy">
+            <div class="spotlight-kicker"><span class="live-dot"></span>FEATURED EVENT / USGS</div>
+            <h2 id="spotlight-title">Waiting for live catalog</h2>
+            <p class="spotlight-place" id="spotlight-place">Loading a significant recent event…</p>
+            <div class="spotlight-stats">
+              <div><span>MAGNITUDE</span><strong id="spotlight-magnitude">--</strong></div>
+              <div><span>DEPTH</span><strong id="spotlight-depth">--</strong></div>
+              <div><span>ORIGIN · UTC</span><strong id="spotlight-time">--</strong></div>
+            </div>
+            <button class="spotlight-action" id="spotlight-action" type="button" disabled>Inspect event <span aria-hidden="true">↘</span></button>
+          </div>
+          <div class="spotlight-visual">
+            <img id="spotlight-image" alt="USGS ShakeMap intensity image for the featured earthquake" hidden>
+            <div class="spotlight-placeholder" id="spotlight-placeholder"><span class="placeholder-signal">NO IMAGE</span><span id="spotlight-image-status">Loading event imagery</span></div>
+            <span class="spotlight-image-credit" id="spotlight-image-credit">USGS INTENSITY SHAKE MAP · MMI</span>
+          </div>
+        </section>
+
         <section class="metrics-grid" aria-label="Earthquake summary">
           <article class="metric-card metric-primary"><div class="metric-top"><span>EVENTS IN WINDOW</span><span class="metric-glyph">↗</span></div><div class="metric-value" id="event-count">--</div><div class="metric-foot"><span class="metric-mark"></span><span id="window-label">USGS · past 24 hours</span></div></article>
           <article class="metric-card"><div class="metric-top"><span>MAGNITUDE 4.5+</span><span class="metric-glyph orange">◉</span></div><div class="metric-value" id="strong-count">--</div><div class="metric-foot">Significant events in window</div></article>

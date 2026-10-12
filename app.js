@@ -16,6 +16,11 @@ const elements = {
   range: document.querySelector("#feed-range"), refresh: document.querySelector("#refresh-button"),
   alertStatus: document.querySelector("#alert-status"), alertToggle: document.querySelector("#alert-toggle"),
   alertThreshold: document.querySelector("#alert-threshold"),
+  spotlightTitle: document.querySelector("#spotlight-title"), spotlightPlace: document.querySelector("#spotlight-place"),
+  spotlightMagnitude: document.querySelector("#spotlight-magnitude"), spotlightDepth: document.querySelector("#spotlight-depth"),
+  spotlightTime: document.querySelector("#spotlight-time"), spotlightImage: document.querySelector("#spotlight-image"),
+  spotlightPlaceholder: document.querySelector("#spotlight-placeholder"), spotlightImageStatus: document.querySelector("#spotlight-image-status"),
+  spotlightImageCredit: document.querySelector("#spotlight-image-credit"), spotlightAction: document.querySelector("#spotlight-action"),
   eventCount: document.querySelector("#event-count"), strongCount: document.querySelector("#strong-count"),
   maxMagnitude: document.querySelector("#max-magnitude"), strongestPlace: document.querySelector("#strongest-place"),
   windowLabel: document.querySelector("#window-label"), mapCount: document.querySelector("#map-count"),
@@ -43,6 +48,8 @@ const SEEN_EVENTS_KEY = "seismic-field-seen-events";
 let alertsEnabled = localStorage.getItem(ALERTS_ENABLED_KEY) === "true";
 let alertsBaselineReady = false;
 let knownEventIds = new Set(JSON.parse(localStorage.getItem(SEEN_EVENTS_KEY) || "[]"));
+const eventDetailsCache = new Map();
+let spotlightRequestId = 0;
 
 function updateAlertControls() {
   if (!("Notification" in window)) {
@@ -288,7 +295,73 @@ function selectEvent(eventId) {
   elements.detailLink.href = properties.url ?? "#";
   elements.detailLink.classList.toggle("disabled", !properties.url);
   elements.detailLink.setAttribute("aria-disabled", String(!properties.url));
+  renderSpotlight(event);
   renderEventList();
+}
+
+function chooseFeaturedEvent(items) {
+  const significant = items.filter((event) => Number(event.properties.mag) >= 4.5);
+  const candidates = significant.length ? significant : items;
+  return candidates.reduce((strongest, event) => Number(event.properties.mag) > Number(strongest.properties.mag) ? event : strongest);
+}
+
+async function renderSpotlight(event) {
+  const requestId = ++spotlightRequestId;
+  const properties = event.properties;
+  const [, , depth] = event.geometry?.coordinates ?? [];
+  elements.spotlightTitle.textContent = `Magnitude ${Number(properties.mag).toFixed(1)}`;
+  elements.spotlightPlace.textContent = properties.place ?? "Location unavailable";
+  elements.spotlightMagnitude.textContent = Number(properties.mag).toFixed(1);
+  elements.spotlightDepth.textContent = Number.isFinite(depth) ? `${depth.toFixed(0)} km` : "--";
+  elements.spotlightTime.textContent = formatOrigin(properties.time).replace(/\s+UTC$/, "");
+  elements.spotlightAction.disabled = false;
+  elements.spotlightImage.hidden = true;
+  elements.spotlightImage.removeAttribute("src");
+  elements.spotlightImageStatus.textContent = "Checking USGS products";
+  elements.spotlightImageCredit.textContent = "USGS INTENSITY SHAKE MAP · MMI";
+  elements.spotlightAction.onclick = () => {
+    document.querySelector("#events").scrollIntoView({ behavior: "smooth", block: "start" });
+    selectEvent(event.id);
+  };
+
+  if (!properties.detail) {
+    elements.spotlightImageStatus.textContent = "No event detail record available";
+    return;
+  }
+
+  try {
+    if (!eventDetailsCache.has(event.id)) {
+      eventDetailsCache.set(event.id, fetch(properties.detail).then((response) => {
+        if (!response.ok) throw new Error(`USGS detail returned ${response.status}`);
+        return response.json();
+      }));
+    }
+    const detail = await eventDetailsCache.get(event.id);
+    if (requestId !== spotlightRequestId) return;
+    const shakemap = detail.properties.products?.shakemap?.[0];
+    const contents = shakemap?.contents ?? {};
+    const image = contents["download/intensity.jpg"]
+      ?? contents["download/intensity.png"]
+      ?? Object.values(contents).find((item) => /^image\/(jpeg|png)$/i.test(item.contentType ?? ""));
+    if (!image?.url) {
+      elements.spotlightImageStatus.textContent = "No ShakeMap published for this event";
+      elements.spotlightImageCredit.textContent = "USGS EVENT · SHAKE MAP UNAVAILABLE";
+      return;
+    }
+    elements.spotlightImage.onload = () => {
+      if (requestId !== spotlightRequestId) return;
+      elements.spotlightImage.hidden = false;
+      elements.spotlightPlaceholder.hidden = true;
+    };
+    elements.spotlightImage.onerror = () => {
+      if (requestId === spotlightRequestId) elements.spotlightImageStatus.textContent = "ShakeMap image unavailable";
+    };
+    elements.spotlightImage.src = image.url;
+    elements.spotlightImage.alt = `USGS ShakeMap intensity image for M ${Number(properties.mag).toFixed(1)} earthquake near ${properties.place ?? "unknown location"}`;
+  } catch (error) {
+    if (requestId === spotlightRequestId) elements.spotlightImageStatus.textContent = "USGS image product unavailable";
+    console.warn("Unable to load event ShakeMap:", error);
+  }
 }
 
 async function loadFeed() {
@@ -306,7 +379,7 @@ async function loadFeed() {
     renderMetrics();
     renderMap();
     renderEventList();
-    if (events.length && !events.some((event) => event.id === selectedEventId)) selectEvent(events[0].id);
+    if (events.length && !events.some((event) => event.id === selectedEventId)) selectEvent(chooseFeaturedEvent(events).id);
     if (!events.length) {
       selectedEventId = null;
       elements.detailTitle.textContent = "No current events";
