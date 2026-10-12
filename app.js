@@ -166,6 +166,18 @@ function initMap() {
   map = L.map("earthquake-map", { zoomControl: false, worldCopyJump: true, minZoom: 2 }).setView([17, 5], 2);
   L.control.zoom({ position: "topright" }).addTo(map);
   map.attributionControl.setPrefix(false);
+  const yesterday = new Date();
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+  const satelliteDate = yesterday.toISOString().slice(0, 10);
+  L.tileLayer("https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_NextGeneration/default/2016-01-01/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpg", {
+    maxZoom: 8,
+    attribution: 'Imagery: <a href="https://www.earthdata.nasa.gov/">NASA Earthdata</a>',
+  }).addTo(map);
+  L.tileLayer(`https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/${satelliteDate}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`, {
+    maxZoom: 9,
+    opacity: 0.94,
+    attribution: 'Satellite: <a href="https://www.earthdata.nasa.gov/">NASA GIBS / VIIRS</a>',
+  }).addTo(map);
   markerLayer = L.layerGroup().addTo(map);
   if (L.heatLayer) {
     densityLayer = L.heatLayer([], {
@@ -208,7 +220,7 @@ async function loadWorldMap() {
     const topology = await response.json();
     L.geoJSON(topojson.feature(topology, topology.objects.countries), {
       interactive: false,
-      style: { color: "#648f81", weight: 0.8, fillColor: "#21453f", fillOpacity: 0.88 },
+      style: { color: "#f0f4e9", weight: 0.7, opacity: 0.42, fillOpacity: 0 },
     }).addTo(map);
     map.attributionControl.addAttribution('Country boundaries: <a href="https://www.naturalearthdata.com/">Natural Earth</a>');
     if (mapMode === "density" && densityLayer) densityLayer.bringToFront();

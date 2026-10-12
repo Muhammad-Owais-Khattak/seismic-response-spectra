@@ -5,7 +5,7 @@ A browser-based global earthquake monitor paired with a local structural respons
 ## Dashboard
 
 - Live global earthquake catalog from the [USGS Earthquake Hazards Program](https://earthquake.usgs.gov/earthquakes/feed/), refreshed every 60 seconds.
-- A full-width global map with event and density modes, map-linked magnitude filtering, and hourly, 24-hour, 7-day, and 30-day catalog windows.
+- A full-width global map with near-real-time NASA VIIRS satellite imagery, event and density modes, map-linked magnitude filtering, and hourly, 24-hour, 7-day, and 30-day catalog windows.
 - Featured significant events with their real USGS ShakeMap intensity images when a ShakeMap product is published; no map API key is needed.
 - Optional browser notifications for newly reported global events, with a configurable minimum magnitude.
 - Response-spectrum plots for PSA, PSV, and displacement from the included CSV, with support for loading another compatible CSV.
