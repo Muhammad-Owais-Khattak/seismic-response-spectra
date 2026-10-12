@@ -46,6 +46,7 @@
           <div class="intro-actions">
             <label class="range-control" for="feed-range"><span>CATALOG WINDOW</span>
               <select id="feed-range" aria-label="Earthquake catalog time window">
+                <option value="hour">Past hour</option>
                 <option value="day">Past 24 hours</option>
                 <option value="week">Past 7 days</option>
                 <option value="month">Past 30 days</option>
@@ -100,7 +101,10 @@
           <article class="panel map-panel">
             <div class="panel-heading">
               <div><div class="section-kicker">01 / SPATIAL DISTRIBUTION</div><h2>Global event map</h2></div>
-              <div class="map-legend"><span><i class="legend-dot minor"></i>&lt; 4.0</span><span><i class="legend-dot moderate"></i>4.0–5.4</span><span><i class="legend-dot major"></i>5.5+</span></div>
+              <div class="map-heading-tools">
+                <div class="map-mode-switch" role="group" aria-label="Map visualization mode"><button class="map-mode-button active" data-map-mode="events" type="button">Events</button><button class="map-mode-button" data-map-mode="density" type="button">Density</button></div>
+                <div class="map-legend"><span><i class="legend-dot minor"></i>&lt; 4.0</span><span><i class="legend-dot moderate"></i>4.0–5.4</span><span><i class="legend-dot major"></i>5.5+</span></div>
+              </div>
             </div>
             <div class="map-wrap"><div id="earthquake-map" role="application" aria-label="Map of recent earthquakes"></div><div class="map-stamp"><span class="pulse-dot"></span>LIVE CATALOG</div></div>
             <div class="panel-foot map-foot"><span>Circle size reflects magnitude</span><span id="map-count">Loading event locations…</span></div>
@@ -146,6 +150,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
     <script src="app.js"></script>
   </body>

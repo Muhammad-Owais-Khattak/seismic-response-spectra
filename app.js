@@ -1,10 +1,11 @@
 const FEED_URLS = {
+  hour: "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_hour.geojson",
   day: "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson",
   week: "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson",
   month: "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_month.geojson",
 };
 
-const RANGE_LABELS = { day: "past 24 hours", week: "past 7 days", month: "past 30 days" };
+const RANGE_LABELS = { hour: "past hour", day: "past 24 hours", week: "past 7 days", month: "past 30 days" };
 const MEASURES = {
   psa_m_per_s2: { label: "PSA", unit: "m/s²", axis: "Spectral acceleration (m/s²)", color: "#df8050" },
   psv_m_per_s: { label: "PSV", unit: "m/s", axis: "Pseudo-spectral velocity (m/s)", color: "#438775" },
@@ -39,6 +40,8 @@ let events = [];
 let selectedEventId = null;
 let map;
 let markerLayer;
+let densityLayer;
+let mapMode = "events";
 let spectrumRows = [];
 let activeMeasure = "psa_m_per_s2";
 let spectrumChart;
@@ -164,7 +167,38 @@ function initMap() {
   L.control.zoom({ position: "topright" }).addTo(map);
   map.attributionControl.setPrefix(false);
   markerLayer = L.layerGroup().addTo(map);
+  if (L.heatLayer) {
+    densityLayer = L.heatLayer([], {
+      radius: 31,
+      blur: 22,
+      maxZoom: 5,
+      max: 1,
+      gradient: { 0.18: "#51d7c0", 0.42: "#a2e46d", 0.68: "#ffc24d", 1: "#ff594d" },
+    });
+  }
+  document.querySelectorAll("[data-map-mode]").forEach((button) => {
+    button.addEventListener("click", () => setMapMode(button.dataset.mapMode));
+  });
   loadWorldMap();
+}
+
+function setMapMode(mode) {
+  if (mode === "density" && !densityLayer) return;
+  mapMode = mode;
+  document.querySelectorAll("[data-map-mode]").forEach((button) => {
+    const active = button.dataset.mapMode === mapMode;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+  if (!map || !markerLayer || !densityLayer) return;
+  if (mapMode === "density") {
+    map.removeLayer(markerLayer);
+    densityLayer.addTo(map);
+  } else {
+    map.removeLayer(densityLayer);
+    markerLayer.addTo(map);
+    markerLayer.bringToFront();
+  }
 }
 
 async function loadWorldMap() {
@@ -174,10 +208,11 @@ async function loadWorldMap() {
     const topology = await response.json();
     L.geoJSON(topojson.feature(topology, topology.objects.countries), {
       interactive: false,
-      style: { color: "#9aafa4", weight: 0.7, fillColor: "#d7e5d9", fillOpacity: 0.82 },
+      style: { color: "#648f81", weight: 0.8, fillColor: "#21453f", fillOpacity: 0.88 },
     }).addTo(map);
     map.attributionControl.addAttribution('Country boundaries: <a href="https://www.naturalearthdata.com/">Natural Earth</a>');
-    markerLayer.bringToFront();
+    if (mapMode === "density" && densityLayer) densityLayer.bringToFront();
+    else markerLayer.bringToFront();
   } catch (error) {
     console.error("Unable to load country boundaries:", error);
     document.querySelector("#map-count").textContent = "Country outlines unavailable; event locations remain plotted";
@@ -237,10 +272,14 @@ function renderMetrics() {
 function renderMap() {
   if (!map || !markerLayer) return;
   markerLayer.clearLayers();
-  for (const event of events) {
+  const minimum = Number(elements.magnitudeFilter.value);
+  const visibleEvents = events.filter((event) => Number(event.properties.mag ?? 0) >= minimum);
+  const heatPoints = [];
+  for (const event of visibleEvents) {
     const { longitude, latitude } = getCoordinates(event);
     const magnitude = Number(event.properties.mag);
     if (!Number.isFinite(longitude) || !Number.isFinite(latitude) || !Number.isFinite(magnitude)) continue;
+    heatPoints.push([latitude, longitude, Math.min(1, Math.max(0.16, magnitude / 7))]);
     const color = magnitude >= 5.5 ? "#df705b" : magnitude >= 4 ? "#eda04e" : "#75b989";
     L.circleMarker([latitude, longitude], {
       radius: Math.max(4, Math.min(13, 3 + magnitude * 1.15)),
@@ -248,7 +287,8 @@ function renderMap() {
     }).bindTooltip(`M ${magnitude.toFixed(1)} · ${event.properties.place ?? "Unknown location"}`).addTo(markerLayer)
       .on("click", () => selectEvent(event.id));
   }
-  elements.mapCount.textContent = `${events.length.toLocaleString("en-US")} locations plotted`;
+  densityLayer?.setLatLngs(heatPoints);
+  elements.mapCount.textContent = `${visibleEvents.length.toLocaleString("en-US")} locations plotted`;
 }
 
 function renderEventList() {
@@ -473,7 +513,10 @@ function renderChart() {
 
 elements.range.addEventListener("change", loadFeed);
 elements.refresh.addEventListener("click", loadFeed);
-elements.magnitudeFilter.addEventListener("change", renderEventList);
+elements.magnitudeFilter.addEventListener("change", () => {
+  renderEventList();
+  renderMap();
+});
 elements.eventList.addEventListener("click", (event) => {
   const row = event.target.closest("[data-event-id]");
   if (row) selectEvent(row.dataset.eventId);
