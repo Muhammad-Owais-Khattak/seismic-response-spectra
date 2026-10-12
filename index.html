@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#173b35">
+    <title>Seismic Field | Response Monitor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Main navigation">
+        <a class="brand" href="#overview" aria-label="Seismic Field home">
+          <span class="brand-mark">S<span>/</span></span>
+          <span class="brand-name">SEISMIC<span>FIELD</span></span>
+        </a>
+        <div class="sidebar-label">MONITORING</div>
+        <nav class="side-nav">
+          <a class="nav-link active" href="#overview"><span class="nav-index">01</span>Live overview</a>
+          <a class="nav-link" href="#events"><span class="nav-index">02</span>Event catalog</a>
+          <a class="nav-link" href="#spectrum"><span class="nav-index">03</span>Response spectra</a>
+        </nav>
+        <div class="sidebar-bottom">
+          <div class="connection-indicator"><span class="pulse-dot"></span><span id="connection-label">Connecting to USGS</span></div>
+          <div class="sidebar-caption">GLOBAL EARTHQUAKE FEED<br>Updated automatically</div>
+          <a class="source-link" href="https://earthquake.usgs.gov/earthquakes/feed/" target="_blank" rel="noreferrer">USGS data source <span>↗</span></a>
+        </div>
+      </aside>
+
+      <main class="main-content" id="overview">
+        <header class="topbar">
+          <div class="crumbs"><span>ENGINEERING</span><span class="crumb-slash">/</span><span>SEISMIC RESPONSE</span></div>
+          <div class="topbar-right"><span class="utc-label">UTC</span><span class="clock" id="clock">--:--:--</span><span class="avatar" aria-label="Seismic dashboard">SF</span></div>
+        </header>
+
+        <div class="page-intro">
+          <div>
+            <div class="eyebrow"><span class="live-dot"></span>LIVE SEISMIC INTELLIGENCE</div>
+            <h1>Field overview<span class="title-period">.</span></h1>
+            <p class="intro-copy">Global event activity with structural response analysis.</p>
+          </div>
+          <div class="intro-actions">
+            <label class="range-control" for="feed-range"><span>CATALOG WINDOW</span>
+              <select id="feed-range" aria-label="Earthquake catalog time window">
+                <option value="day">Past 24 hours</option>
+                <option value="week">Past 7 days</option>
+                <option value="month">Past 30 days</option>
+              </select>
+            </label>
+            <button class="refresh-button" id="refresh-button" type="button" title="Refresh earthquake feed" aria-label="Refresh earthquake feed"><span aria-hidden="true">↻</span></button>
+          </div>
+        </div>
+
+        <section class="metrics-grid" aria-label="Earthquake summary">
+          <article class="metric-card metric-primary"><div class="metric-top"><span>EVENTS IN WINDOW</span><span class="metric-glyph">↗</span></div><div class="metric-value" id="event-count">--</div><div class="metric-foot"><span class="metric-mark"></span><span id="window-label">USGS · past 24 hours</span></div></article>
+          <article class="metric-card"><div class="metric-top"><span>MAGNITUDE 4.5+</span><span class="metric-glyph orange">◉</span></div><div class="metric-value" id="strong-count">--</div><div class="metric-foot">Significant events in window</div></article>
+          <article class="metric-card"><div class="metric-top"><span>STRONGEST EVENT</span><span class="metric-glyph coral">⌁</span></div><div class="metric-value metric-magnitude" id="max-magnitude">--</div><div class="metric-foot truncate" id="strongest-place">Waiting for feed</div></article>
+          <article class="metric-card spectrum-metric"><div class="metric-top"><span>PEAK SPECTRAL ACCELERATION</span><span class="metric-glyph green">∿</span></div><div class="metric-value" id="peak-psa">--<small>m/s²</small></div><div class="metric-foot" id="peak-period">From loaded response spectrum</div></article>
+        </section>
+
+        <section class="monitor-grid" aria-label="Live earthquake monitoring">
+          <article class="panel map-panel">
+            <div class="panel-heading">
+              <div><div class="section-kicker">01 / SPATIAL DISTRIBUTION</div><h2>Global event map</h2></div>
+              <div class="map-legend"><span><i class="legend-dot minor"></i>&lt; 4.0</span><span><i class="legend-dot moderate"></i>4.0–5.4</span><span><i class="legend-dot major"></i>5.5+</span></div>
+            </div>
+            <div class="map-wrap"><div id="earthquake-map" role="application" aria-label="Map of recent earthquakes"></div><div class="map-stamp"><span class="pulse-dot"></span>LIVE CATALOG</div></div>
+            <div class="panel-foot map-foot"><span>Circle size reflects magnitude</span><span id="map-count">Loading event locations…</span></div>
+          </article>
+
+          <article class="panel events-panel" id="events">
+            <div class="panel-heading event-heading">
+              <div><div class="section-kicker">02 / RECENT ACTIVITY</div><h2>Earthquake catalog</h2></div>
+              <label class="magnitude-filter"><span class="sr-only">Filter by magnitude</span><select id="magnitude-filter" aria-label="Minimum earthquake magnitude"><option value="0">All magnitudes</option><option value="2.5">M 2.5+</option><option value="4.5">M 4.5+</option></select></label>
+            </div>
+            <div class="event-columns"><span>MAG / PLACE</span><span>DEPTH</span><span>TIME</span></div>
+            <div class="event-list" id="event-list" aria-live="polite"><div class="empty-state">Fetching latest earthquake events…</div></div>
+            <div class="panel-foot event-foot"><span id="feed-updated">Waiting for first update</span><span>Auto refresh · 60 sec</span></div>
+          </article>
+        </section>
+
+        <section class="analysis-grid" id="spectrum" aria-label="Response spectrum analysis">
+          <article class="panel spectrum-panel">
+            <div class="panel-heading spectrum-heading">
+              <div><div class="section-kicker">03 / STRUCTURAL RESPONSE</div><h2>Response spectrum</h2><p class="panel-subtitle">Local analysis result · oscillator period vs spectral response</p></div>
+              <div class="spectrum-actions"><div class="segmented-control" role="group" aria-label="Select response spectrum measure"><button class="measure-button active" data-measure="psa_m_per_s2" type="button">PSA</button><button class="measure-button" data-measure="psv_m_per_s" type="button">PSV</button><button class="measure-button" data-measure="sd_m" type="button">Sd</button></div><label class="upload-button" for="csv-upload">Load CSV</label><input class="sr-only" type="file" id="csv-upload" accept=".csv,text/csv"></div>
+            </div>
+            <div class="chart-wrap"><canvas id="spectrum-chart" aria-label="Response spectrum chart"></canvas><div class="chart-empty" id="chart-empty" hidden>Chart library could not load. Check your network connection.</div></div>
+            <div class="panel-foot spectrum-foot"><span id="spectrum-source">Source: results/response_spectrum.csv</span><span id="spectrum-points">-- data points</span></div>
+          </article>
+
+          <article class="panel detail-panel">
+            <div class="panel-heading detail-heading"><div><div class="section-kicker">SELECTED EVENT</div><h2 id="detail-title">Choose an event</h2></div><span class="detail-mag" id="detail-mag">--</span></div>
+            <div class="detail-location" id="detail-place">Select a catalog row to inspect event details.</div>
+            <dl class="detail-grid">
+              <div><dt>ORIGIN TIME</dt><dd id="detail-time">--</dd></div>
+              <div><dt>DEPTH</dt><dd id="detail-depth">--</dd></div>
+              <div><dt>COORDINATES</dt><dd id="detail-coords">--</dd></div>
+              <div><dt>MAGNITUDE TYPE</dt><dd id="detail-type">--</dd></div>
+            </dl>
+            <a class="event-link disabled" id="detail-link" href="#" target="_blank" rel="noreferrer" aria-disabled="true">Open event on USGS <span>↗</span></a>
+            <div class="science-note"><span class="note-mark">i</span><p>Live catalog reports earthquake events, not ground-motion recordings. The spectrum above comes from the local project CSV.</p></div>
+          </article>
+        </section>
+        <footer class="page-footer"><span>SEISMIC FIELD <b>·</b> RESPONSE MONITOR</span><span>Live event catalog: <a href="https://earthquake.usgs.gov/earthquakes/feed/" target="_blank" rel="noreferrer">USGS Earthquake Hazards Program</a></span></footer>
+      </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
